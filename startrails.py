@@ -92,7 +92,9 @@ class Stack():
     def output(self):
         new_stack = numpy.array(numpy.round(self.array), dtype = numpy.uint8)
         output = Image.fromarray(new_stack, mode = "RGB")
-        filename = "stack_{}-{}.jpeg".format(self.img_range.start, self.img_range.stop)
+        from datetime import datetime
+        date = datetime.now().strftime("%Y-%m-%d")
+        filename = "stack_{}-{}_{}.jpeg".format(self.img_range.start, self.img_range.stop, date)
         output.save(filename, "JPEG")
         print("Saved stack to {}".format(filename))
 
