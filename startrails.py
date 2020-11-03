@@ -4,8 +4,46 @@ import numpy
 import argparse
 import math
 
-
+from datetime import datetime
 from PIL import Image
+
+#import psutil
+#process = psutil.Process(os.getpid())
+class ImageFile():
+    IMAGE_COUNTER = 0
+
+    def __init__(self, file_path):
+        self.path = file_path
+        #self.filename = ""
+        image = Image.open(self.path)
+        self.array = numpy.array(image, dtype = numpy.float)
+        self.size = image.size
+#        print(process.memory_percent())  # for debugging memory usage, not very useful w/ Mac's kernel_task
+
+        ImageFile.IMAGE_COUNTER += 1
+        self.num = ImageFile.IMAGE_COUNTER
+        print("loaded image {}/{}: '{}'".format(self.num, total_image_count, self.path))
+
+    def __del__(self):
+        print("deleted image {}/{}".format(self.num, total_image_count))
+
+
+class Stack():
+    def __init__(self, img_range, width, height):
+        self.img_range = img_range
+        self.array = numpy.zeros((height, width, 3), numpy.float)
+
+    def add_image(self, image):
+        self.array = numpy.maximum(self.array, image.array)
+        print("image {}, added to stack {}".format(image.num, self.img_range))
+
+    def output(self):
+        new_stack = numpy.array(numpy.round(self.array), dtype = numpy.uint8)
+        output = Image.fromarray(new_stack, mode = "RGB")
+        date = datetime.now().strftime("%Y-%m-%d")
+        filename = "stack_{}-{}_{}.jpeg".format(self.img_range.start, self.img_range.stop, date)
+        output.save(filename, "JPEG")
+        print("Saved stack to {}".format(filename))
 
 
 def get_subset_of_files(files : list, start_filename : str = None, end_filename : str = None) -> list:
@@ -19,6 +57,7 @@ def get_subset_of_files(files : list, start_filename : str = None, end_filename 
         end_index = files.index(end_filename)
     # both can throw ValueError
     return files[start_index:end_index]
+
 
 
 parser = argparse.ArgumentParser(description="")
@@ -45,30 +84,6 @@ if args.skip_num:
 
 total_image_count = len(jpeg_paths)
 
-import os
-import psutil
-process = psutil.Process(os.getpid())
-
-class ImageFile():
-    IMAGE_COUNTER = 0
-
-    def __init__(self, file_path):
-        self.path = file_path
-        #self.filename = ""
-        image = Image.open(self.path)
-        self.array = numpy.array(image, dtype = numpy.float)
-        self.size = image.size
-#        print(process.memory_percent())  # for debugging memory usage, not very useful w/ Mac's kernel_task
-
-        ImageFile.IMAGE_COUNTER += 1
-        self.num = ImageFile.IMAGE_COUNTER
-        print("loaded image {}/{}: '{}'".format(self.num, total_image_count, self.path))
-
-    def __del__(self):
-        print("deleted image {}/{}".format(self.num, total_image_count))
-
-
-
 # batch loading & processing, to make best use of memory
 # preload first image :)
 first_image = ImageFile(jpeg_paths.pop(0))
@@ -79,25 +94,6 @@ images.append(first_image)
 
 batch_size = 15 # seems like a reasonable limit for my 8GB physical mem mac mini 2012
                 # because I'm dealing w/ images of 4000x6000px size as numpy arrays. (could preload and use nbytes for size estimate)
-
-class Stack():
-    def __init__(self, img_range, width, height):
-        self.img_range = img_range
-        self.array = numpy.zeros((height, width, 3), numpy.float)
-
-    def add_image(self, image):
-        self.array = numpy.maximum(self.array, image.array)
-        print("image {}, added to stack {}".format(image.num, self.img_range))
-
-    def output(self):
-        new_stack = numpy.array(numpy.round(self.array), dtype = numpy.uint8)
-        output = Image.fromarray(new_stack, mode = "RGB")
-        from datetime import datetime
-        date = datetime.now().strftime("%Y-%m-%d")
-        filename = "stack_{}-{}_{}.jpeg".format(self.img_range.start, self.img_range.stop, date)
-        output.save(filename, "JPEG")
-        print("Saved stack to {}".format(filename))
-
 
 stack_subset_size = 20
 stacks = math.floor(total_image_count/stack_subset_size)
