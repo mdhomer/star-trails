@@ -7,19 +7,13 @@ import math
 from datetime import datetime
 from PIL import Image
 
-#import psutil
-#process = psutil.Process(os.getpid())
 class ImageFile():
     IMAGE_COUNTER = 0
-
     def __init__(self, file_path):
         self.path = file_path
-        #self.filename = ""
         image = Image.open(self.path)
         self.array = numpy.array(image, dtype = numpy.float)
         self.size = image.size
-#        print(process.memory_percent())  # for debugging memory usage, not very useful w/ Mac's kernel_task
-
         ImageFile.IMAGE_COUNTER += 1
         self.num = ImageFile.IMAGE_COUNTER
         print("loaded image {}/{}: '{}'".format(self.num, total_image_count, self.path))
@@ -29,11 +23,18 @@ class ImageFile():
 
 
 class Stack():
-    def __init__(self, img_range, width, height):
+    def __init__(self, img_range):
         self.img_range = img_range
-        self.array = numpy.zeros((height, width, 3), numpy.float)
+        self.array = None
+        self.width, self.height = (None, None)
 
     def add_image(self, image):
+        if self.array is None:
+            self.width, self.height = image.size
+            self.array = numpy.zeros((self.height, self.width, 3), numpy.float)
+        elif image.size != (self.width, self.height):
+            raise Exception("{} != {}".format(image.size, (self.width, self.height)))  #TODO include filename w/ exception
+
         self.array = numpy.maximum(self.array, image.array)
         print("image {}, added to stack {}".format(image.num, self.img_range))
 
@@ -57,7 +58,6 @@ def get_subset_of_files(files : list, start_filename : str = None, end_filename 
         end_index = files.index(end_filename)
     # both can throw ValueError
     return files[start_index:end_index]
-
 
 
 parser = argparse.ArgumentParser(description="")
@@ -84,46 +84,19 @@ if args.skip_num:
 
 total_image_count = len(jpeg_paths)
 
-# batch loading & processing, to make best use of memory
-# preload first image :)
-first_image = ImageFile(jpeg_paths.pop(0))
-width, height = first_image.size
-
-images = []
-images.append(first_image)
-
-batch_size = 15 # seems like a reasonable limit for my 8GB physical mem mac mini 2012
-                # because I'm dealing w/ images of 4000x6000px size as numpy arrays. (could preload and use nbytes for size estimate)
-
 stack_subset_size = 20
-stacks = math.floor(total_image_count/stack_subset_size)
+stacks = math.ceil(total_image_count/stack_subset_size)
 print("stacks " + str(stacks))
 stack_subsets = []
 for i in range(0, stacks):
-    stk = Stack(range(i * stack_subset_size, i * stack_subset_size + stack_subset_size), width, height)
+    stk = Stack(range(i * stack_subset_size, i * stack_subset_size + stack_subset_size))
     stack_subsets.append(stk)
 
-batches = math.ceil(total_image_count / batch_size)
-for b in range(0, batches):
-    print("processing batch {}/{}".format(b, batches))
-    batch_start_index = (b * batch_size)
-    batch_end_index = min((b * batch_size + batch_size), total_image_count - 1)
-
-    # load batch
-    for i, path in enumerate(jpeg_paths[batch_start_index:batch_end_index]):
-        image = ImageFile(path)
-        if (width, height) != image.size:  # ensure sizes are consistent.
-            raise Exception("{} != {}".format(image.size, (width, height)))  #TODO include filename w/ exception
-        images.append(image)
-
-    # process batch, w/ stack definitions
-    for i, stack in enumerate(stack_subsets):
-        for image in images:
-            if image.num in stack.img_range:
-                stack.add_image(image)
-
-    # clear images batch cache, to free memory for each image.array
-    images.clear()
+for path in jpeg_paths:
+    image = ImageFile(path)
+    for stack in stack_subsets:
+        if image.num in stack.img_range:
+            stack.add_image(image)
 
 # write stacked images to disk :)
 for i, stack in enumerate(stack_subsets):
