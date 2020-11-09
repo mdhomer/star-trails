@@ -86,42 +86,43 @@ def create_stacks_of_size(stack_size: int) -> list:
     return stacks
 
 
-parser = argparse.ArgumentParser(description="")
-parser.add_argument('--target_dir', type=str, required=True, help="")
-parser.add_argument('--start_filename', type=str, required=False, default=None, help="")
-parser.add_argument('--end_filename', type=str, required=False, default=None, help="")
-parser.add_argument('--output', type=str, required=True, help="")
-parser.add_argument('--skip_num', type=int, required=False, default=None, help="")
-args = parser.parse_args()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument('--target_dir', type=str, required=True, help="")
+    parser.add_argument('--start_filename', type=str, required=False, default=None, help="")
+    parser.add_argument('--end_filename', type=str, required=False, default=None, help="")
+    parser.add_argument('--output', type=str, required=True, help="")
+    parser.add_argument('--skip_num', type=int, required=False, default=None, help="")
+    args = parser.parse_args()
 
-if not os.path.exists(os.path.dirname(args.output)):
-    raise Exception("--output path directory doesn't exist: {}".format(args.output))
+    if not os.path.exists(os.path.dirname(args.output)):
+        raise Exception("--output path directory doesn't exist: {}".format(args.output))
 
-file_paths = os.listdir(args.target_dir)
-file_paths.sort()
-file_paths = get_subset_of_files(file_paths, args.start_filename, args.end_filename)
+    file_paths = os.listdir(args.target_dir)
+    file_paths.sort()
+    file_paths = get_subset_of_files(file_paths, args.start_filename, args.end_filename)
 
-# create full file paths w/ target_dir included
-file_paths = [args.target_dir + x for x in file_paths]
-jpeg_paths = list(filter(lambda x: x.endswith(".JPG"), file_paths))
+    # create full file paths w/ target_dir included
+    file_paths = [args.target_dir + x for x in file_paths]
+    jpeg_paths = list(filter(lambda x: x.endswith(".JPG"), file_paths))
 
-if args.skip_num:
-    jpeg_paths = jpeg_paths[::args.skip_num]
+    if args.skip_num:
+        jpeg_paths = jpeg_paths[::args.skip_num]
 
-total_image_count = len(jpeg_paths)
+    total_image_count = len(jpeg_paths)
 
-stacks_to_process = []
-stacks_to_process.extend(create_stacks_of_size(10))
-stacks_to_process.extend(create_stacks_of_size(20))
-stacks_to_process.extend(create_stacks_of_size(30))
-stacks_to_process.extend(create_stacks_of_size(40))
-stacks_to_process.append(Stack(range(0, total_image_count))) # use all images
+    stacks_to_process = []
+    stacks_to_process.extend(create_stacks_of_size(10))
+    stacks_to_process.extend(create_stacks_of_size(20))
+    stacks_to_process.extend(create_stacks_of_size(30))
+    stacks_to_process.extend(create_stacks_of_size(40))
+    stacks_to_process.append(Stack(range(0, total_image_count))) # use all images
 
-for path in jpeg_paths:
-    image = ImageFile(path)
+    for path in jpeg_paths:
+        image = ImageFile(path)
+        for stack in stacks_to_process:
+            if image.num in stack.img_range:
+                stack.add_image(image)
+
     for stack in stacks_to_process:
-        if image.num in stack.img_range:
-            stack.add_image(image)
-
-for stack in stacks_to_process:
-    stack.output()
+        stack.output()
