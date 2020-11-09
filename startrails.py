@@ -30,8 +30,12 @@ class Stack():
         self.img_range = img_range
         self.array = None
         self.width, self.height = (None, None)
+        self._image_limit = len(img_range) - 1
+        self._n_images = 0
 
     def add_image(self, image: Image.Image):
+        if self._n_images == self._image_limit:
+            Exception("Stack has already been processed & output!!!!")
         if self.array is None:
             self.width, self.height = image.size
             self.array = numpy.zeros((self.height, self.width, 3), numpy.float)
@@ -39,9 +43,14 @@ class Stack():
             raise Exception("{} != {}".format(image.size, (self.width, self.height)))  # TODO include filename w/ exception
 
         self.array = numpy.maximum(self.array, image.array)
+        self._n_images = self._n_images + 1
         print("image {}, added to stack {}".format(image.num, self.img_range))
+        if self._n_images == self._image_limit:
+            self.output()
 
     def output(self):
+        if self.array is None:
+            return  # maybe should log
         new_stack = numpy.array(numpy.round(self.array), dtype=numpy.uint8)
         output = Image.fromarray(new_stack, mode="RGB")
         date = datetime.now().strftime("%Y-%m-%d")
@@ -49,6 +58,8 @@ class Stack():
             self.img_range.start, self.img_range.stop, date)
         output.save(filename, "JPEG")
         print("Saved stack to {}".format(filename))
+        # cleanup memory footprint of this object
+        self.array = None
 
 
 def get_subset_of_files(files: list,
@@ -112,6 +123,5 @@ for path in jpeg_paths:
         if image.num in stack.img_range:
             stack.add_image(image)
 
-# write stacked images to disk :)
-for i, stack in enumerate(stacks_to_process):
+for stack in stacks_to_process:
     stack.output()
