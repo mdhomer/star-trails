@@ -21,10 +21,10 @@ class ImageFile():
         image = Image.open(self.path)
         self.array = numpy.array(image, dtype=numpy.float)
         self.size = image.size
-        ImageFile.IMAGE_COUNTER += 1
         self.num = ImageFile.IMAGE_COUNTER
+        ImageFile.IMAGE_COUNTER += 1
         logging.info("loaded image {}/{}: '{}'".format(
-            self.num, TOTAL_IMAGE_COUNT, self.path))
+            self.num + 1, TOTAL_IMAGE_COUNT, self.path))
 
     def __del__(self):
         logging.debug("deleted image {}/{}".format(self.num, TOTAL_IMAGE_COUNT))
@@ -35,7 +35,7 @@ class Stack():
         self.img_range = img_range
         self.array = None
         self.width, self.height = (None, None)
-        self._image_limit = len(img_range) - 1
+        self._image_limit = len(img_range)
         self._n_images = 0
 
     def add_image(self, image: Image.Image):
@@ -122,10 +122,9 @@ if __name__ == "__main__":
     TOTAL_IMAGE_COUNT = len(jpeg_paths)
 
     stacks_to_process = []
-    stacks_to_process.extend(create_stacks_of_size(10))
-    stacks_to_process.extend(create_stacks_of_size(20))
     stacks_to_process.extend(create_stacks_of_size(30))
     stacks_to_process.extend(create_stacks_of_size(40))
+    stacks_to_process.extend(create_stacks_of_size(50))
     stacks_to_process.append(Stack(range(0, TOTAL_IMAGE_COUNT)))  # use all images
 
     for path in jpeg_paths:
