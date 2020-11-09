@@ -4,12 +4,13 @@ import numpy
 import argparse
 import math
 
+from pathlib import Path
 from datetime import datetime
 from PIL import Image
 
 
 TOTAL_IMAGE_COUNT = 0
-
+OUTPUT_LOCATION = "."
 
 class ImageFile():
     IMAGE_COUNTER = 0
@@ -49,6 +50,7 @@ class Stack():
         self._n_images = self._n_images + 1
         print("image {}, added to stack {}".format(image.num, self.img_range))
         if self._n_images == self._image_limit:
+            print("Add image output()")
             self.output()
 
     def output(self):
@@ -56,12 +58,11 @@ class Stack():
             return  # maybe should log
         new_stack = numpy.array(numpy.round(self.array), dtype=numpy.uint8)
         output = Image.fromarray(new_stack, mode="RGB")
-        date = datetime.now().strftime("%Y-%m-%d")
-        filename = "stack_{}-{}_{}.jpeg".format(
-            self.img_range.start, self.img_range.stop, date)
-        output.save(filename, "JPEG")
-        print("Saved stack to {}".format(filename))
+        path = "{}/stack_{}-{}.jpeg".format(OUTPUT_LOCATION, self.img_range.start, self.img_range.stop)
+        output.save(path, "JPEG")
+        print("Saved stack to {}".format(path))
         # cleanup memory footprint of this object
+        del self.array
         self.array = None
 
 
@@ -94,12 +95,16 @@ if __name__ == "__main__":
     parser.add_argument('--target_dir', type=str, required=True, help="")
     parser.add_argument('--start_filename', type=str, required=False, default=None, help="")
     parser.add_argument('--end_filename', type=str, required=False, default=None, help="")
-    parser.add_argument('--output', type=str, required=True, help="")
+    #parser.add_argument('--output', type=str, required=False, help="")
     parser.add_argument('--skip_num', type=int, required=False, default=None, help="")
     args = parser.parse_args()
 
-    if not os.path.exists(os.path.dirname(args.output)):
-        raise Exception("--output path directory doesn't exist: {}".format(args.output))
+    date = datetime.now().strftime("%Y-%m-%d")
+    export_directory = OUTPUT_LOCATION + "/" + date
+    Path(export_directory).mkdir(parents=True, exist_ok=True)
+    OUTPUT_LOCATION = export_directory
+    #if not os.path.exists(os.path.dirname(args.output)):
+    #    raise Exception("--output path directory doesn't exist: {}".format(args.output))
 
     file_paths = os.listdir(args.target_dir)
     file_paths.sort()
@@ -121,7 +126,7 @@ if __name__ == "__main__":
     stacks_to_process.extend(create_stacks_of_size(40))
     stacks_to_process.append(Stack(range(0, TOTAL_IMAGE_COUNT)))  # use all images
 
-    for path in jpeg_paths:
+    for path in jpeg_paths[0:11]:
         image = ImageFile(path)
         for stack in stacks_to_process:
             if image.num in stack.img_range:
