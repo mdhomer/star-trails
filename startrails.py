@@ -8,6 +8,9 @@ from datetime import datetime
 from PIL import Image
 
 
+TOTAL_IMAGE_COUNT = 0
+
+
 class ImageFile():
     IMAGE_COUNTER = 0
 
@@ -19,10 +22,10 @@ class ImageFile():
         ImageFile.IMAGE_COUNTER += 1
         self.num = ImageFile.IMAGE_COUNTER
         print("loaded image {}/{}: '{}'".format(
-            self.num, total_image_count, self.path))
+            self.num, TOTAL_IMAGE_COUNT, self.path))
 
     def __del__(self):
-        print("deleted image {}/{}".format(self.num, total_image_count))
+        print("deleted image {}/{}".format(self.num, TOTAL_IMAGE_COUNT))
 
 
 class Stack():
@@ -78,7 +81,7 @@ def get_subset_of_files(files: list,
 
 
 def create_stacks_of_size(stack_size: int) -> list:
-    n_stacks = math.ceil(total_image_count/stack_size)
+    n_stacks = math.ceil(TOTAL_IMAGE_COUNT/stack_size)
     stacks = []
     for i in range(0, n_stacks):
         stk = Stack(range(i * stack_size, i * stack_size + stack_size))
@@ -109,14 +112,14 @@ if __name__ == "__main__":
     if args.skip_num:
         jpeg_paths = jpeg_paths[::args.skip_num]
 
-    total_image_count = len(jpeg_paths)
+    TOTAL_IMAGE_COUNT = len(jpeg_paths)
 
     stacks_to_process = []
     stacks_to_process.extend(create_stacks_of_size(10))
     stacks_to_process.extend(create_stacks_of_size(20))
     stacks_to_process.extend(create_stacks_of_size(30))
     stacks_to_process.extend(create_stacks_of_size(40))
-    stacks_to_process.append(Stack(range(0, total_image_count))) # use all images
+    stacks_to_process.append(Stack(range(0, TOTAL_IMAGE_COUNT)))  # use all images
 
     for path in jpeg_paths:
         image = ImageFile(path)
