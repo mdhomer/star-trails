@@ -128,7 +128,7 @@ if __name__ == "__main__":
     stacks_to_process.extend(create_stacks_of_size(40))
     stacks_to_process.append(Stack(range(0, TOTAL_IMAGE_COUNT)))  # use all images
 
-    for path in jpeg_paths[0:11]:
+    for path in jpeg_paths:
         image = ImageFile(path)
         for stack in stacks_to_process:
             if image.num in stack.img_range:
