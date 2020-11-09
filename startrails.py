@@ -66,6 +66,15 @@ def get_subset_of_files(files: list,
     return files[start_index:end_index]
 
 
+def create_stacks_of_size(stack_size: int) -> list:
+    n_stacks = math.ceil(total_image_count/stack_size)
+    stacks = []
+    for i in range(0, n_stacks):
+        stk = Stack(range(i * stack_size, i * stack_size + stack_size))
+        stacks.append(stk)
+    return stacks
+
+
 parser = argparse.ArgumentParser(description="")
 parser.add_argument('--target_dir', type=str, required=True, help="")
 parser.add_argument('--start_filename', type=str, required=False, default=None, help="")
@@ -90,20 +99,19 @@ if args.skip_num:
 
 total_image_count = len(jpeg_paths)
 
-stack_subset_size = 20
-stacks = math.ceil(total_image_count/stack_subset_size)
-print("stacks " + str(stacks))
-stack_subsets = []
-for i in range(0, stacks):
-    stk = Stack(range(i * stack_subset_size, i * stack_subset_size + stack_subset_size))
-    stack_subsets.append(stk)
+stacks_to_process = []
+stacks_to_process.extend(create_stacks_of_size(10))
+stacks_to_process.extend(create_stacks_of_size(20))
+stacks_to_process.extend(create_stacks_of_size(30))
+stacks_to_process.extend(create_stacks_of_size(40))
+stacks_to_process.append(Stack(range(0, total_image_count))) # use all images
 
 for path in jpeg_paths:
     image = ImageFile(path)
-    for stack in stack_subsets:
+    for stack in stacks_to_process:
         if image.num in stack.img_range:
             stack.add_image(image)
 
 # write stacked images to disk :)
-for i, stack in enumerate(stack_subsets):
+for i, stack in enumerate(stacks_to_process):
     stack.output()
