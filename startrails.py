@@ -3,6 +3,7 @@ import os
 import numpy
 import argparse
 import math
+import logging
 
 from pathlib import Path
 from datetime import datetime
@@ -22,11 +23,11 @@ class ImageFile():
         self.size = image.size
         ImageFile.IMAGE_COUNTER += 1
         self.num = ImageFile.IMAGE_COUNTER
-        print("loaded image {}/{}: '{}'".format(
+        logging.info("loaded image {}/{}: '{}'".format(
             self.num, TOTAL_IMAGE_COUNT, self.path))
 
     def __del__(self):
-        print("deleted image {}/{}".format(self.num, TOTAL_IMAGE_COUNT))
+        logging.debug("deleted image {}/{}".format(self.num, TOTAL_IMAGE_COUNT))
 
 
 class Stack():
@@ -48,9 +49,8 @@ class Stack():
 
         self.array = numpy.maximum(self.array, image.array)
         self._n_images = self._n_images + 1
-        print("image {}, added to stack {}".format(image.num, self.img_range))
+        logging.info("image {}, added to stack {}".format(image.num, self.img_range))
         if self._n_images == self._image_limit:
-            print("Add image output()")
             self.output()
 
     def output(self):
@@ -60,7 +60,7 @@ class Stack():
         output = Image.fromarray(new_stack, mode="RGB")
         path = "{}/stack_{}-{}.jpeg".format(OUTPUT_LOCATION, self.img_range.start, self.img_range.stop)
         output.save(path, "JPEG")
-        print("Saved stack to {}".format(path))
+        logging.info("Saved stack to {}".format(path))
         # cleanup memory footprint of this object
         del self.array
         self.array = None
@@ -91,6 +91,8 @@ def create_stacks_of_size(stack_size: int) -> list:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     parser = argparse.ArgumentParser(description="")
     parser.add_argument('--target_dir', type=str, required=True, help="")
     parser.add_argument('--start_filename', type=str, required=False, default=None, help="")
