@@ -11,7 +11,7 @@ from PIL import Image
 class ImageFile():
     IMAGE_COUNTER = 0
 
-    def __init__(self, file_path):
+    def __init__(self, file_path: str):
         self.path = file_path
         image = Image.open(self.path)
         self.array = numpy.array(image, dtype=numpy.float)
@@ -26,12 +26,12 @@ class ImageFile():
 
 
 class Stack():
-    def __init__(self, img_range):
+    def __init__(self, img_range: list):
         self.img_range = img_range
         self.array = None
         self.width, self.height = (None, None)
 
-    def add_image(self, image):
+    def add_image(self, image: Image.Image):
         if self.array is None:
             self.width, self.height = image.size
             self.array = numpy.zeros((self.height, self.width, 3), numpy.float)
