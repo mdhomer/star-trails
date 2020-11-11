@@ -94,32 +94,43 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--target_dir', type=str, required=True, help="")
+    parser.add_argument('--source_dir', type=str, required=True, help="")
     parser.add_argument('--start_filename', type=str, required=False, default=None, help="")
     parser.add_argument('--end_filename', type=str, required=False, default=None, help="")
-    #parser.add_argument('--output', type=str, required=False, help="")
+    parser.add_argument('--output_dir', type=str, required=False, help="")
     parser.add_argument('--skip_num', type=int, required=False, default=None, help="")
+    parser.add_argument('--filetype', type=str, required=False, default="jpg", help="")
     args = parser.parse_args()
 
+    if args.output_dir:
+        OUTPUT_LOCATION = args.output_dir
+    if not os.path.isdir(OUTPUT_LOCATION):
+        raise Exception("--output_dir path directory doesn't exist: {}".format(OUTPUT_LOCATION))
     date = datetime.now().strftime("%Y-%m-%d")
     export_directory = OUTPUT_LOCATION + "/" + date
     Path(export_directory).mkdir(parents=True, exist_ok=True)
     OUTPUT_LOCATION = export_directory
-    #if not os.path.exists(os.path.dirname(args.output)):
-    #    raise Exception("--output path directory doesn't exist: {}".format(args.output))
 
-    file_paths = os.listdir(args.target_dir)
+    file_type = args.filetype.lower()
+    accepted_filetypes = ["jpg", "raf"]  # jpeg
+    if file_type not in accepted_filetypes:
+        raise Exception("--filetype '{}' provided is not supported".format(args.filetype))
+
+    file_paths = os.listdir(args.source_dir)
     file_paths.sort()
     file_paths = get_subset_of_files(file_paths, args.start_filename, args.end_filename)
 
-    # create full file paths w/ target_dir included
-    file_paths = [args.target_dir + x for x in file_paths]
-    jpeg_paths = list(filter(lambda x: x.endswith(".JPG"), file_paths))
+    # create full file paths w/ source_dir included
+    file_paths = [args.source_dir + x for x in file_paths]
+    file_type_endings = ("." + file_type, "." + file_type.upper())
+    image_paths = list(filter(lambda x: x.endswith(file_type_endings), file_paths))
+    if not image_paths:
+        raise Exception("No images of type {} found in the --source_dir {}".format(file_type, args.source_dir))
 
     if args.skip_num:
-        jpeg_paths = jpeg_paths[::args.skip_num]
+        image_paths = image_paths[::args.skip_num]
 
-    TOTAL_IMAGE_COUNT = len(jpeg_paths)
+    TOTAL_IMAGE_COUNT = len(image_paths)
 
     stacks_to_process = []
     stacks_to_process.extend(create_stacks_of_size(30))
@@ -127,7 +138,7 @@ if __name__ == "__main__":
     stacks_to_process.extend(create_stacks_of_size(50))
     stacks_to_process.append(Stack(range(0, TOTAL_IMAGE_COUNT)))  # use all images
 
-    for path in jpeg_paths:
+    for path in image_paths:
         image = ImageFile(path)
         for stack in stacks_to_process:
             if image.num in stack.img_range:
