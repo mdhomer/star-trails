@@ -100,6 +100,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_dir', type=str, required=False, help="")
     parser.add_argument('--skip_num', type=int, required=False, default=None, help="")
     parser.add_argument('--filetype', type=str, required=False, default="jpg", help="")
+    parser.add_argument('--exclude_filename', type=str, action='append')
     args = parser.parse_args()
 
     if args.output_dir:
@@ -120,6 +121,11 @@ if __name__ == "__main__":
     file_paths.sort()
     file_paths = get_subset_of_files(file_paths, args.start_filename, args.end_filename)
 
+    if args.exclude_filename:
+        for filename in args.exclude_filename:
+            file_paths.remove(filename)
+            logging.info("Skipping {} as provided by --exclude_filename".format(filename))
+
     # create full file paths w/ source_dir included
     file_paths = [args.source_dir + x for x in file_paths]
     file_type_endings = ("." + file_type, "." + file_type.upper())
@@ -133,9 +139,9 @@ if __name__ == "__main__":
     TOTAL_IMAGE_COUNT = len(image_paths)
 
     stacks_to_process = []
-    stacks_to_process.extend(create_stacks_of_size(30))
-    stacks_to_process.extend(create_stacks_of_size(40))
-    stacks_to_process.extend(create_stacks_of_size(50))
+    #stacks_to_process.extend(create_stacks_of_size(30))
+    #stacks_to_process.extend(create_stacks_of_size(40))
+    #stacks_to_process.extend(create_stacks_of_size(50))
     stacks_to_process.append(Stack(range(0, TOTAL_IMAGE_COUNT)))  # use all images
 
     for path in image_paths:
