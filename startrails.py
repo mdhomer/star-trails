@@ -139,10 +139,11 @@ if __name__ == "__main__":
     TOTAL_IMAGE_COUNT = len(image_paths)
 
     stacks_to_process = []
-    #stacks_to_process.extend(create_stacks_of_size(30))
     #stacks_to_process.extend(create_stacks_of_size(40))
-    #stacks_to_process.extend(create_stacks_of_size(50))
-    stacks_to_process.append(Stack(range(0, TOTAL_IMAGE_COUNT)))  # use all images
+    half = int(TOTAL_IMAGE_COUNT / 2)
+    stacks_to_process.append(Stack(range(0, half)))
+    stacks_to_process.append(Stack(range(half, TOTAL_IMAGE_COUNT)))
+    stacks_to_process.append(Stack(range(0, TOTAL_IMAGE_COUNT)))
 
     for path in image_paths:
         image = ImageFile(path)
