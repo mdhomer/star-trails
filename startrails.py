@@ -8,6 +8,9 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from PIL import Image
+import rawpy  # for raw/raf image reading.
+import imageio  # for raf data output.
+import cv2  # for raf data denoising.
 
 
 TOTAL_IMAGE_COUNT = 0
@@ -16,15 +19,26 @@ OUTPUT_LOCATION = "."
 class ImageFile():
     IMAGE_COUNTER = 0
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, file_type: str):
         self.path = file_path
-        image = Image.open(self.path)
-        self.array = numpy.array(image, dtype=numpy.float)
-        self.size = image.size
+        self.file_type = file_type
+        if file_type == "jpg":
+            image = Image.open(self.path)
+            self.array = numpy.array(image, dtype=numpy.float)
+            self.size = image.size
+        elif file_type == "raf":
+            raw = rawpy.imread(file_path)
+            raw_sizes = raw.sizes
+            self.array = raw.postprocess(
+                    no_auto_bright=True,
+                    use_camera_wb=True,
+                    output_bps=8,  # 8 needed w/ use of cv2 library de-noise functions
+                    demosaic_algorithm=rawpy.DemosaicAlgorithm.DHT)
+            self.array = cv2.fastNlMeansDenoisingColored(self.array, None, 2, 10, 7, 21)
+            self.size = (raw_sizes.width, raw_sizes.height)
         self.num = ImageFile.IMAGE_COUNTER
         ImageFile.IMAGE_COUNTER += 1
-        logging.info("loaded image {}/{}: '{}'".format(
-            self.num + 1, TOTAL_IMAGE_COUNT, self.path))
+        logging.info("loaded image {}/{}: '{}'".format(self.num + 1, TOTAL_IMAGE_COUNT, self.path))
 
     def __del__(self):
         logging.debug("deleted image {}/{}".format(self.num, TOTAL_IMAGE_COUNT))
@@ -37,10 +51,15 @@ class Stack():
         self.width, self.height = (None, None)
         self._image_limit = len(img_range)
         self._n_images = 0
+        self._file_type = None
 
     def add_image(self, image: Image.Image):
+        if self._file_type is None:
+            self._file_type = image.file_type
+        elif image.file_type != self._file_type:
+            raise Exception("Passed image to stack that isn't expected type: {} != {}".format(image.file_type, self._file_type))
         if self._n_images == self._image_limit:
-            Exception("Stack has already been processed & output!!!!")
+            raise Exception("Stack has already been processed & output!!!!")
         if self.array is None:
             self.width, self.height = image.size
             self.array = numpy.zeros((self.height, self.width, 3), numpy.float)
@@ -57,9 +76,13 @@ class Stack():
         if self.array is None:
             return  # maybe should log
         new_stack = numpy.array(numpy.round(self.array), dtype=numpy.uint8)
-        output = Image.fromarray(new_stack, mode="RGB")
-        path = "{}/stack_{}-{}.jpeg".format(OUTPUT_LOCATION, self.img_range.start, self.img_range.stop)
-        output.save(path, "JPEG")
+        path = "{}/stack_{}-{}_{}".format(OUTPUT_LOCATION, self.img_range.start, self.img_range.stop, self._file_type)
+        if self._file_type == "jpg":
+            output = Image.fromarray(new_stack, mode="RGB")
+            output.save(path + '.jpeg', "JPEG")
+        elif self._file_type == "raf":
+            imageio.imwrite(path + '.tiff', new_stack)
+
         logging.info("Saved stack to {}".format(path))
         # cleanup memory footprint of this object
         del self.array
@@ -146,7 +169,7 @@ if __name__ == "__main__":
     stacks_to_process.append(Stack(range(0, TOTAL_IMAGE_COUNT)))
 
     for path in image_paths:
-        image = ImageFile(path)
+        image = ImageFile(path, file_type)
         for stack in stacks_to_process:
             if image.num in stack.img_range:
                 stack.add_image(image)
